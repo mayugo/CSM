@@ -44,7 +44,6 @@ ti(3) = ti(2) + tb_a;
 ti(4) = ti(3) + tb_t;
 ti(5) = ti(4) + tt-2*tb_t;
 ti(6) = ti(5) + tb_t;
-t_total_test = sum(ti)
 
 xi(1) =       + 1/2*a_max*ti(1)^2;
 xi(2) = xi(1) + v_treball*(ti(2)-ti(1));
@@ -52,7 +51,6 @@ xi(3) = xi(2) + v_treball*(ti(3)-ti(2)) - 1/2*a_max*(ti(3)-ti(2))^2;
 xi(4) = xi(3) + 0*(ti(4)-ti(3)) - 1/2*a_max*(ti(4)-ti(3))^2;
 xi(5) = xi(4) - v_max*(ti(5)-ti(4));
 xi(6) = xi(5) - v_max*(ti(6)-ti(5)) + 1/2*a_max*(ti(6)-ti(5))^2;
-x_total_test = sum(xi)
 
 % Obtenir la trajectoria posicio, velocitat i acceleració
 t_ = [0:0.05:t_total];
@@ -106,8 +104,8 @@ ylabel('$\ddot{u} \; \rm{[mm/s^2]}$','Interpreter','latex','FontSize',font_size)
 xlabel('$t$ [s]','Interpreter','latex','FontSize',font_size)
 set(gca,'FontSize',font_size)
 xlim([0 t_total])
-saveas(H1,'./figures/CIN_Ex11_met1.svg')
-saveas(H1,'./figures/CIN_Ex11_met1.pdf')
+%saveas(H1,'./figures/CIN_Ex11_met1.svg')
+%saveas(H1,'./figures/CIN_Ex11_met1.pdf')
 
 % Representar omega motor
 H11=figure;font_size=18;
@@ -117,8 +115,8 @@ xlabel('$t$ [s]','Interpreter','latex','FontSize',font_size)
 set(gca,'FontSize',font_size)
 xlim([0 t_total])
 H11.Position = [100 100 560 240];
-saveas(H11,'./figures/CIN_Ex11_met1_omg.svg')
-saveas(H11,'./figures/CIN_Ex11_met1_omg.pdf')
+%saveas(H11,'./figures/CIN_Ex11_met1_omg.svg')
+%saveas(H11,'./figures/CIN_Ex11_met1_omg.pdf')
 
 %% Resolució: Métode 2, definir trajectòria punt a punt
 % S'imposa arranc inicial, llavors un moviment de treball i un de tornada
@@ -258,8 +256,8 @@ ylabel('$\ddot{u} \; \rm{[mm/s^2]}$','Interpreter','latex','FontSize',font_size)
 xlabel('$t$ [s]','Interpreter','latex','FontSize',font_size)
 set(gca,'FontSize',font_size)
 xlim([0 t_total])
-saveas(H2,'./figures/CIN_Ex11_met2.svg')
-saveas(H2,'./figures/CIN_Ex11_met2.pdf')
+%saveas(H2,'./figures/CIN_Ex11_met2.svg')
+%saveas(H2,'./figures/CIN_Ex11_met2.pdf')
 
 % Representar omega motor
 H21=figure;font_size=18;
@@ -269,5 +267,5 @@ xlabel('$t$ [s]','Interpreter','latex','FontSize',font_size)
 set(gca,'FontSize',font_size)
 xlim([0 t_total])
 H21.Position = [100 100 560 240];
-saveas(H21,'./figures/CIN_Ex11_met2_omg.svg')
-saveas(H21,'./figures/CIN_Ex11_met2_omg.pdf')
+%saveas(H21,'./figures/CIN_Ex11_met2_omg.svg')
+%saveas(H21,'./figures/CIN_Ex11_met2_omg.pdf')
