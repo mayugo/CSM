@@ -18,12 +18,9 @@ L   = 940e-3;   % m,        longitud del cargol
 rho = 7.85e3;   % kg/m3,    densitat acer cargol
 % Acoplament
 J_a = 30e-6;    % kg m2,    inercia acoplament
-k_a = 120e-3;   % Nm/rad, rigidesa acoplament
 % Massa carro
 m_carro = 1.35; % kg, massa carro
 M       = 0;    % kg, massa càrrega
-
-n_gdl =2    % Sistema mecànic 2gdl
 
 %% RESOLUCIÓ 
 % Propietats cargol
@@ -97,13 +94,14 @@ subplot(1,2,1);
 step(u * model_M)
 grid; xlabel('temps (s)'); ylabel('velocitat (rad/s)')
 subplot(1,2,2);
-step(u * model_M)
+step(u * model_M*i_n)
 grid; xlabel('temps (s)'); ylabel('velocitat (m/s)')
 %saveas(H3,'./figures/CSM_cargol_01_din_1b_3.svg')
 %saveas(H3,'./figures/CSM_cargol_01_din_1b_3.pdf')
 
 %% Resposta temporal impuls extern (canvi voltatge)
 t_f = 0.06
+t_a = 0.03
 t  = 0:1e-5:t_f;
 V_ = [u*(rectpuls(t,t_f))];
 [out,T,X] = lsim(model_M,V_,t);  % resposta model a canvi voltatge
@@ -130,14 +128,27 @@ set(gca,'FontSize',18),hold off,grid on
 %saveas(H4,'./figures/CSM_cargol_01_din_1b_4.pdf')
 
 %% Resposta temporal impuls extern (canvi voltatge PWM 80% de 120 v.)
-t_f = 0.06
-t   = 0:1e-5:t_f;
+% =========================================================
+% PWM (16 polsos)
+% =========================================================
+t = linspace(0, t_f, 20000);
+V_       = zeros(size(t));
 
-Npulses =100;  % #, nombre de polsos 
-Duty    = 80;  % %, de 0 a 100%,  percentatge del cicle de treball
+Npulses = 16;
+Duty    = 0.8;
+% =========================================================
+% PWM només dins [0, t_a]
+% =========================================================
+Tcycle = t_a / Npulses;
+Ton    = Duty * Tcycle;
 
-V_ = u*rectpuls(t,t_f).*...
-     pulstran(t,[0:1/Npulses:1]*t_f,@rectpuls,Duty/100*t_f/Npulses);
+for k = 0:(Npulses - 1)
+    t_start = k * Tcycle;
+    t_end   = t_start + Ton;
+    mask = (t <= t_a) & (t >= t_start) & (t < t_end);
+    V_(mask) = u;
+end
+
 [out,T,X] = lsim(model_M,V_,t);  % resposta model a canvi voltatge
 
 H5=figure;
