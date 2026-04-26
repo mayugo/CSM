@@ -1,19 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-%% Sol·lució Exercici transportador rodets caixes
-% Implemntacio model dinàmic
-%  J.A.Mayugo, UdG, 3
-"""
 
 import numpy as np
 import matplotlib.pyplot as plt
-# import sympy as sp
-from sympy.abc import s
-from sympy import Poly
-from sympy.physics.control.lti import TransferFunction, Feedback, Series, Parallel
 from scipy import signal
 
+plt.rcParams.update({
+    "text.usetex": True,      # Utilitza LaTeX per a tot el text
+    "font.family": "serif",   # Fonts serif com LaTeX
+    "font.size": 14
+})
 
 # %% DADES PROBLEMA
 r  =  20e-3     # m, radi politja petita
@@ -48,6 +42,13 @@ i_t = i/rR;
 omega_nom = n_nom*np.pi/30
 vC = rR * omega_nom/i
 
+print('\n' + '-'*60)
+print(f"{'Velocitats':>12} | {'Valor':>20}")
+print('-'*60)
+print(f"{'omega motor':>12} | {omega_nom:20.2f}  rad/s")
+print(f"{'velocitat paquet':>12} | {vC:20.2f}  m/s")
+print('-'*60 + '\n')
+
 # %% Resolució APARTAT b)
 omega_n=n_nom/30*np.pi
 M_nom= Pot_nom/omega_n #%-- Nm
@@ -56,144 +57,271 @@ K_m = M_nom/A_nom  # %-- Nm / A
 K_b = V_nom/omega_n  #%-- V s / rad
 P_nom = omega_n*M_nom
 
+print('\n' + '-'*60)
+print(f"{'Paràmetres':>20} | {'Valor':>20}")
+print('-'*60)
+print(f"{'Potència nominal':>20} | {P_nom:20.2f}  W")
+print(f"{'Moment nominal':>20} | {M_nom:20.2f}  Nm\n")
+print(f"{'K_m':>20} | {K_m:20.2f}  Nm/A")
+print(f"{'K_b':>20} | {K_b:20.2f}  V s/rad")
+print('-'*60 + '\n')
+
 # %% Resolució APARTAT c)
 J_e = Jmot + Jred/i**2 + JR*NR/i**2 + mC*NC/i_t**2
 b_e = bm + c/i**2  *NR
-b_e_ = b_e + (K_m*K_b)/R
 
-# % Models
-def model_2_tf(eq):
-    num, den = [[float(i) for i in Poly(i, s).all_coeffs()] for i in eq.as_numer_denom()]
-    return signal.lti(num, den)
+# --- MODEL COMPLET ---
+num = [K_m]
+den = [J_e*L, J_e*R + b_e*L, b_e*R + K_b*K_m]
+tf_omg_m = signal.lti(num, den)
 
-# def model_2_zpk(eq):
-#     num, den = [[float(i) for i in sp.Poly(i, s).all_coeffs()] for i in eq.as_numer_denom()]
-#     return signal.tf2zpk(num,den)
+num_u = [n / i_t for n in num]  # / i_t per convertir de velocitat angular del motor a velocitat lineal del paquet
+den_u = den + [0]               # afegim un zero a l'origen per convertir de velocitat a posició
+tf_u_c = signal.lti(num_u, den_u)
 
-model_omg_m  = K_m / ((J_e*s+b_e)*(L*s+R)+K_b*K_m)
-model_u_c    = model_omg_m/s/i_t
-tf_omg_m = model_2_tf(model_omg_m)
-tf_u_c   = model_2_tf(model_u_c)
+# --- MODEL SIMPLIFICAT (L = 0) ---
+numS = [K_m]
+denS = [J_e*R, b_e*R + K_b*K_m]
+tf_omg_mS = signal.lti(numS, denS)
 
-model_omg_mS = K_m / ((J_e*s+b_e)*(R)+K_b*K_m)
-model_u_cS   = model_omg_mS/s/i_t
-tf_omg_mS = model_2_tf(model_omg_mS)
-tf_u_cS   = model_2_tf(model_u_cS)
+numS_u = [n / i_t for n in numS]  # / i_t per convertir de velocitat angular del motor a velocitat lineal del paquet    
+denS_u = denS + [0]               # afegim un zero a l'origen per convertir de velocitat a posició
+tf_u_cS = signal.lti(numS_u, denS_u)
 
-# % Diagrama de Bode i R-Locus
-wRange = np.logspace(np.log10(0.1), np.log10(1e4), num=100)
-w, mag, phase = tf_omg_m.bode(w=wRange)
-plt.figure()
-plt.subplots(2, 1, sharex='col')
+tau_e = L/R
+tau_m = J_e / (b_e + (K_m*K_b)/R)
+
+print('\n' + '-'*60)
+print(f"{'Del paràmetres':>12} | {'Valor':>20}")
+print('-'*60)
+print(f"{'Tau_e':>12} | {tau_e:20.5f}  s")
+print(f"{'Tau_m':>12} | {tau_m:20.5f}  s")
+print('-'*60 + '\n')
+
+poles = tf_omg_m.poles
+polesS = tf_omg_mS.poles
+
+reals = np.real(poles)
+realsS = np.real(polesS)
+
+taus = -1 / reals
+tausS = -1 / realsS
+
+print('\n' + '-'*60)
+print(f"{'Del pols':>12} | ")
+print('-'*60)
+print('Pols (complet):', tf_omg_m.poles)
+print('Pols (simplificat):', tf_omg_mS.poles)
+print('-'*60)
+print("Reals (complet):", reals)
+print("Reals (simplificat):", realsS)
+print('-'*60)
+print("Taus (complet):", taus)
+print("Taus (simplificat):", tausS)
+print('-'*60 + '\n')
+
+# %% Diagrama de Bode i R-Locus
+wRange = np.logspace(np.log10(1), np.log10(1e4), num=100)
+
+w, mag, phase    = tf_omg_m.bode(w=wRange)
+w_u, mag_u, phase_u = tf_u_c.bode(w=wRange)
+
+plt.subplots(2, 1, sharex='col', figsize=(7,6))
 plt.subplot(2, 1, 1)
-plt.semilogx(w, mag)    # Bode magnitude plot
-plt.title('Bode Diagram: input: Volts, output: omega_m')
-plt.ylabel('Magnitude [Db]')
-plt.subplot(2, 1, 2)
-plt.semilogx(w, phase)  # Bode phase plot
-plt.ylabel('Phase [deg]')
-plt.xlabel('Frequency [rad/s]')
-plt.show()
+plt.semilogx(w, mag, label =r'$\omega_m(t)/U$')    # Bode magnitude plot
+plt.semilogx(w_u[::10], mag_u[::10], '-x', color='tab:red', label = r'$u(t)/U$')    # Bode magnitude plot
+plt.ylabel('Magnitud [Db]')
+plt.xlim([wRange[0], wRange[-1]])
+#plt.title(r'Diagrama de Bode: input: Volts, output: $\omega_m$')
+plt.legend()
+plt.grid()
 
-wS, magS, phaseS = tf_u_c.bode(w=wRange)
-plt.figure()
-plt.subplots(2, 1, sharex='col')
-plt.subplot(2, 1, 1)
-plt.semilogx(wS, magS)    # Bode magnitude plot
-plt.title('Bode Diagram: input: Volts, output: u')
-plt.ylabel('Magnitude [Db]')
 plt.subplot(2, 1, 2)
-plt.semilogx(wS, phaseS)  # Bode phase plot
-plt.ylabel('Phase [deg]')
-plt.xlabel('Frequency [rad/s]')
-plt.show()
+plt.semilogx(w, phase, label = 'velocitat motor')  # Bode phase plot
+plt.semilogx(w_u[::10], phase_u[::10], '-x', label = 'desplaçament carro')  # Bode phase plot
+plt.ylabel('Fase [deg]')
+plt.xlabel('Frequència [rad/s]')
+plt.xlim([wRange[0], wRange[-1]])
+plt.grid()
+
+plt.tight_layout()
+plt.savefig('CSM_rodets_din_SOL1.pdf', bbox_inches='tight', transparent=True)
 
 w, H = tf_omg_m.freqresp()
-plt.figure()
-plt.plot(H.real, H.imag, "b")
-plt.plot(H.real, -H.imag, "r")
-plt.xlabel('Real Axix [1/s]')
-plt.ylabel('Imaginary Axix [1/s]')
-plt.title('R-Locus: input: Volts, output: omega_m')
-plt.show()
-
 wS, HS = tf_omg_mS.freqresp()
-plt.figure()
-plt.plot(HS.real, HS.imag, "b")
-plt.plot(HS.real, -HS.imag, "r")
-plt.xlabel('Real Axix [1/s]')
-plt.ylabel('Imaginary Axix [1/s]')
-plt.title('R-Locus: input: Volts, output: omega_m (model simplificat)')
-plt.show()
 
-# % Resposta transitòria: escaló en llaç obert:
+H = np.squeeze(H)
+HS = np.squeeze(HS)
 
-# step(u * model_omg_m,0.1)
+fig, axs = plt.subplots(1, 2, figsize=(7, 4))
 
-tRange = np.linspace(0, 0.1, num=100)
+axs[0].plot(H.real, H.imag, "b")
+axs[0].plot(H.real, -H.imag, "b--")
+axs[0].set_title("Model complet")
+axs[0].set_xlabel("Real Axis")
+axs[0].set_ylabel("Imaginary Axis")
+axs[0].axis('equal')
+axs[0].grid(True)
 
-t, y = tf_omg_m.step(T=tRange)
-# t, y = signal.step2(tf_omg_m,T=tRange)
-plt.plot(t, y*V_nom)
-plt.xlabel('t [s]')
-plt.ylabel('$\omega_m$ [rad/s]')
-plt.title('Resposta a una funció escaló amb ' + str(V_nom) + 'V al motor')
-plt.grid()
-plt.xlim([0, t[-1]])
-# plt.ylim([0, 110])
-plt.show()
+axs[1].plot(HS.real, HS.imag, "r")
+axs[1].plot(HS.real, -HS.imag, "r--")
+axs[1].set_title("Model simplificat")
+axs[1].set_xlabel("Real Axis")
+axs[1].set_ylabel("Imaginary Axis")
+axs[1].axis('equal')
+axs[1].grid(True)
 
-t, y = tf_u_c.step(T=tRange)
-plt.plot(t, y*V_nom)
-plt.xlabel('t [s]')
-plt.ylabel('desplaçament [m]')
-plt.title('Resposta a una funció escaló amb ' + str(V_nom) + 'V al carro')
-plt.grid()
-plt.xlim([0, t[-1]])
-# plt.ylim([0, 110])
-plt.show()
+fig.suptitle(r"Nyquist plot: input voltage to motor angular velocity $\omega_m$")
 
+plt.tight_layout()
+
+# %% Resposta transitòria: escaló en llaç obert:
+
+tRange = np.linspace(0, 0.08, num=200)
+
+t, y1 = tf_omg_m.step(T=tRange)
+t, y1s = tf_omg_mS.step(T=tRange)
+t, y2 = tf_u_c.step(T=tRange)
+t, y2s = tf_u_cS.step(T=tRange)
+
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,6))
+
+axs[0].plot(t, y1 * V_nom, lw=1.8, label='Model complet')
+axs[0].plot(t[::10], y1s[::10] * V_nom, 'x', lw=1.8, label='Model simplificat')
+axs[0].axvline(tau_m, color='gray', ls='--', lw=3, label=r'$\tau_m$')
+axs[0].set_ylabel(r'$\omega_m(t)$ [rad/s]')
+#axs[0].set_title('Resposta a esglaó (' + str(V_nom) + ' V al motor)')
+axs[0].grid()
+axs[0].set_xlim([0, t[-1]])
+axs[0].legend()
+
+axs[1].plot(t, y2 * V_nom * 1e3, lw=1.8, label='Model complet')
+axs[1].plot(t[::10], y2s[::10] * V_nom * 1e3, 'x', lw=1.8, label='Model simplificat')
+axs[1].axvline(tau_m, color='gray', ls='--', lw=3, label=r'$\tau_m$')
+axs[1].set_xlabel(r'$t$ [s]')
+axs[1].set_ylabel(r'$u(t)$ [mm]')
+axs[1].grid()
+axs[1].set_xlim([0, t[-1]])
+
+plt.tight_layout()
+plt.savefig('CSM_rodets_din_SOL2.pdf', bbox_inches='tight', transparent=True)
 
 # %% Resolució APARTAT d)
 # % Matrius de massa M_, esmorteïment C_ i rigidesa K_
-f_v  = np.array([K_m/R])    # % adaptar inputs en voltatge
-M_ = np.array([J_e])   
-C_ = np.array([b_e_])
-K_ = np.array([0])
 
-# % Definició de l'espai d'estat
+b_e_ = b_e + (K_m*K_b)/R # esmorteïment equivalent que inclou el terme de retroacció de velocitat del motor (K_b) i la força electromotriu (K_m) que apareix a la dinàmica del motor. Aquest terme és important per a modelar correctament el comportament del sistema, ja que representa la dissipació addicional causada per la interacció entre el motor i la càrrega.
+f_v = np.array([[K_m / R]])  # input (1x1)
+
+M_ = np.array([[J_e]])
+C_ = np.array([[b_e_]])
+K_ = np.array([[0]])
+
 n_gdl = M_.shape[0]
-# A = [ zeros(n_gdl) , eye(n_gdl);  -inv(M_)*K_   , -inv(M_)*C_]
-# B = [ zeros(n_gdl) ; inv(M_)]*f_v       % inputs voltatges motors
-# C = [ 0  1 ; 1/i_t  0];       % defineix output velocitats angulars
-# D = [ 0 ; 0];
-# model = ss(A, B, C, D,  'statename', {'\theta_{motor}' 'omg_motor'},...
-#                         'inputname', {'U_{motor} (V)'},...
-#                         'outputname',{'omg_{motor} (rad/s)' 'desp_{caixa} (m/s)'})
 
-# % Diagrama de Bode i R-Locus
-# h=figure;
-# h1 = bodeplot(model); %,{0.1,20});%setoptions(h,'MagUnits','abs','FreqScale','linear')
-# set(h,'Units','Inches');pos = get(h,'Position');
-# set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
-# print(h,'2021ss_bode','-dpdf','-r0')
+# --- A, B ---
+A = np.block([
+    [np.zeros((n_gdl, n_gdl)), np.eye(n_gdl)],
+    [-np.linalg.inv(M_) @ K_,  -np.linalg.inv(M_) @ C_]
+])
 
-# %% Resposta transitòria
-# % escaló en llaç obert:
-# u = V_nom;  %Volts al motor 
-# h=figure;
-# step(u * model,0.1)
-# grid; %title(['Resposta a una funció escaló amb ' num2str(u) ' V al motor'])
-# set(h,'Units','Inches');pos = get(h,'Position');
-# set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
-# print(h,'2021ss_resposta','-dpdf','-r0')
+B = np.block([
+    [np.zeros((n_gdl, 1))],
+    [np.linalg.inv(M_) @ f_v]
+])
 
-# %% Conversió d'espai d'estat H_s = C*inv(s*I-A)*B+D
-# [num,den] = ss2tf(A,B,C,D,1)  
-# H_s11 = tf(num(1,:),den);H_s11=minreal(H_s11)
+# --- C, D ---
+C = np.array([
+    [0,     1],
+    [1/i_t, 0]
+])
 
-# %FT1= H_s11*R
-# %fig1=figure;bode(H_s11,model_omg_mS);%legend('H_{s11}','H_{s22}')
-# %fig2=figure;rlocus(H_s11);%title('Root Locus H_{s11}')
+D = np.zeros((2, 1))
 
+# --- Sisteme SISO ---
+C1 = C[0:1, :]
+D1 = D[0:1, :]
+model1 = signal.StateSpace(A, B, C1, D1)
 
+C2 = C[1:2, :]
+D2 = D[1:2, :]
+model2 = signal.StateSpace(A, B, C2, D2)
+
+# %% Diagrama de Bode i R-Locus
+
+w, mag1, phase1 = signal.bode(model1, w=wRange)
+w, mag2, phase2 = signal.bode(model2, w=wRange)
+
+fig, axs = plt.subplots(4, 1, sharex=True, figsize=(7,7))
+
+axs[0].semilogx(w, mag1, label=r'$\omega_m(t)/U$')
+axs[0].set_ylabel(r'$\omega_m(t)/U$ [dB]')
+axs[0].set_xlim([wRange[0], wRange[-1]])
+axs[0].grid()
+axs[0].legend()
+
+axs[1].semilogx(w, mag2, color='tab:red', label=r'$u(t)/U$')
+axs[1].set_ylabel(r'$u(t)/U$ [dB]')
+axs[1].set_xlim([wRange[0], wRange[-1]])
+axs[1].grid()
+axs[1].legend()
+
+axs[2].semilogx(w, phase1)
+axs[2].set_ylabel("Fase [deg]")
+axs[2].set_xlim([wRange[0], wRange[-1]])
+axs[2].grid()
+
+axs[3].semilogx(w, phase2, color='tab:red')
+axs[3].set_ylabel("Fase [deg]")
+axs[3].set_xlim([wRange[0], wRange[-1]])
+axs[3].set_xlabel(r"Freqüència $\omega$ [rad/s]")
+axs[3].grid()
+
+plt.tight_layout()
+plt.savefig('CSM_rodets_din_SOL3.pdf', bbox_inches='tight', transparent=True)
+
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,6))
+
+w, mag_tfS, phase_tfS = tf_omg_mS.bode(w=wRange)
+w, mag_ss, phase_ss = signal.bode(model1, w=wRange)
+
+axs[0].semilogx(w, mag_tfS, label="TF simplificat")
+axs[0].semilogx(w[::10], mag_ss[::10], 'x', label="State-space")
+axs[0].set_xlim([wRange[0], wRange[-1]])
+axs[0].legend()
+axs[0].grid()
+
+axs[1].semilogx(w, phase_tfS, label="TF simplificat")
+axs[1].semilogx(w[::10], phase_ss[::10], 'x', label="State-space")
+axs[1].set_xlim([wRange[0], wRange[-1]])
+axs[1].legend()
+axs[1].grid()
+
+# %% Resposta transitòria: escaló en llaç obert:
+
+tRange = np.linspace(0, 0.08, num=200)
+
+t, y1 = model1.step(T=tRange)
+t, y2 = model2.step(T=tRange)
+
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,6))
+
+# --- omega_m ---
+axs[0].plot(t, y1 * V_nom, lw=1.8, label=r'$\omega_m(t)/U$')
+axs[0].axvline(tau_m, color='gray', ls='--', lw=3, label=r'$\tau_m$')
+axs[0].set_ylabel(r'$\omega_m(t)$ [rad/s]')
+#axs[0].set_title('Resposta a esglaó (' + str(V_nom) + ' V al motor)')
+axs[0].grid()
+axs[0].set_xlim([0, t[-1]])
+
+# --- desplaçament ---
+axs[1].plot(t, y2 * V_nom * 1e3, lw=1.8, label=r'$u(t)/U$')
+axs[1].axvline(tau_m, color='gray', ls='--', lw=3, label=r'$\tau_m$')
+axs[1].set_xlabel(r'$t$ [s]')
+axs[1].set_ylabel(r'$u(t)$ [mm]')
+axs[1].grid()
+axs[1].set_xlim([0, t[-1]])
+
+plt.tight_layout()
+plt.savefig('CSM_rodets_din_SOL4.pdf', bbox_inches='tight', transparent=True)
+
+plt.show()
