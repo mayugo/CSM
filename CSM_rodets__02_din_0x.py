@@ -126,7 +126,7 @@ wRange = np.logspace(np.log10(1), np.log10(1e4), num=100)
 w, mag, phase    = tf_omg_m.bode(w=wRange)
 w_u, mag_u, phase_u = tf_u_c.bode(w=wRange)
 
-plt.subplots(2, 1, sharex='col', figsize=(7,6))
+plt.subplots(2, 1, sharex='col', figsize=(7,4.5))
 plt.subplot(2, 1, 1)
 plt.semilogx(w, mag, label =r'$\omega_m(t)/U$')    # Bode magnitude plot
 plt.semilogx(w_u[::10], mag_u[::10], '-x', color='tab:red', label = r'$u(t)/U$')    # Bode magnitude plot
@@ -184,7 +184,7 @@ t, y1s = tf_omg_mS.step(T=tRange)
 t, y2 = tf_u_c.step(T=tRange)
 t, y2s = tf_u_cS.step(T=tRange)
 
-fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,6))
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,4.5))
 
 axs[0].plot(t, y1 * V_nom, lw=1.8, label='Model complet')
 axs[0].plot(t[::10], y1s[::10] * V_nom, 'x', lw=1.8, label='Model simplificat')
@@ -205,6 +205,107 @@ axs[1].set_xlim([0, t[-1]])
 
 plt.tight_layout()
 plt.savefig('CSM_rodets_din_SOL2.pdf', bbox_inches='tight', transparent=True)
+
+
+# %% ==== PWM 
+
+t_f = 0.06
+t = np.linspace(0, t_f, 5000)
+
+# =========================
+# PWM
+# =========================
+def pwm_signal(t, duty, Npulses, Vmax):
+    T = t[-1]
+    y = np.zeros_like(t)
+    period = T / Npulses
+    on_time = duty/100 * period
+    
+    for k in range(Npulses):
+        t0 = k * period
+        t1 = t0 + on_time
+        y[(t >= t0) & (t < t1)] = Vmax
+        
+    return y
+
+# =========================
+# SIMULACIÓ PWM
+# =========================
+def simulate_pwm(t, duty, Npulses, u, sys_omg, sys_u):
+    V = pwm_signal(t, duty, Npulses, u)
+
+    _, y_omg, _ = signal.lsim(sys_omg, V, t)
+    _, y_u, _   = signal.lsim(sys_u, V, t)
+
+    return V, y_omg, y_u
+
+# =========================
+# BASE DC (referència)
+# =========================
+Vdc = V_nom * np.ones_like(t)
+
+_, y_omg_dc, _ = signal.lsim(tf_omg_m, Vdc, t)
+_, y_u_dc, _   = signal.lsim(tf_u_c, Vdc, t)
+
+# =========================
+# FIGURA PWM
+# =========================
+def plot_pwm(Npulses, nompdf='CSM_rodets_din_PWM.pdf'):
+
+    duties = [90, 60, 30]
+
+    colors = [
+        (0, 0.45, 0.74),
+        (0.85, 0.33, 0.10),
+        (0.47, 0.67, 0.19)
+    ]
+
+    plt.figure(figsize=(10,7))
+
+    for i, (duty, col) in enumerate(zip(duties, colors)):
+
+        V, y_omg, y_u = simulate_pwm(t, duty, Npulses, V_nom, tf_omg_m, tf_u_c)
+
+        # --- VOLTATGE
+        plt.subplot(3,3,i+1)
+        plt.plot(t, V, color=col, linewidth=1.2)
+        plt.legend([f'PWM {duty}%'], loc='upper center', frameon=False)
+        plt.ylim([0,40])
+        plt.grid()
+        if i == 0:
+            plt.ylabel('voltatge (V)')
+
+        # --- VELOCITAT
+        plt.subplot(3,3,i+4)
+        plt.plot(t, y_omg_dc*30/np.pi, color=(0.7,0.7,0.7), linewidth=1.0)
+        plt.plot(t, y_omg*30/np.pi, color=col, linewidth=1.2)
+        plt.legend([r'eix a $V_n$', f'eix a {duty}%'], loc='upper center', frameon=False)
+        plt.ylim([0,8000])
+        plt.grid()
+        if i == 0:
+            plt.ylabel('velocitat (rpm)')
+
+        # --- DESPLAÇAMENT
+        plt.subplot(3,3,i+7)
+        plt.plot(t, y_u_dc*1e3, color=(0.7,0.7,0.7), linewidth=1.0)
+        plt.plot(t, y_u*1e3, color=col, linewidth=1.2)
+        plt.legend([r'carro a $V_n$', f'carro a {duty}%'], loc='upper center', frameon=False)
+        plt.ylim([0,15])
+        plt.grid()
+        plt.xlabel('temps (s)')
+        if i == 0:
+            plt.ylabel('desplaçament (mm)')
+
+    plt.tight_layout()
+    plt.savefig(nompdf, bbox_inches='tight', transparent=True)
+
+
+# =========================
+# EXECUCIÓ (MATLAB H04 / H05)
+# =========================
+plot_pwm(12,nompdf='CSM_rodets_din_PWM12.pdf')
+plot_pwm(30,nompdf='CSM_rodets_din_PWM30.pdf')
+plot_pwm(60,nompdf='CSM_rodets_din_PWM60.pdf')
 
 # %% Resolució APARTAT d)
 # % Matrius de massa M_, esmorteïment C_ i rigidesa K_
@@ -251,7 +352,7 @@ model2 = signal.StateSpace(A, B, C2, D2)
 w, mag1, phase1 = signal.bode(model1, w=wRange)
 w, mag2, phase2 = signal.bode(model2, w=wRange)
 
-fig, axs = plt.subplots(4, 1, sharex=True, figsize=(7,7))
+fig, axs = plt.subplots(4, 1, sharex=True, figsize=(7,6.5))
 
 axs[0].semilogx(w, mag1, label=r'$\omega_m(t)/U$')
 axs[0].set_ylabel(r'$\omega_m(t)/U$ [dB]')
@@ -259,16 +360,16 @@ axs[0].set_xlim([wRange[0], wRange[-1]])
 axs[0].grid()
 axs[0].legend()
 
-axs[1].semilogx(w, mag2, color='tab:red', label=r'$u(t)/U$')
-axs[1].set_ylabel(r'$u(t)/U$ [dB]')
-axs[1].set_xlim([wRange[0], wRange[-1]])
-axs[1].grid()
-axs[1].legend()
-
-axs[2].semilogx(w, phase1)
-axs[2].set_ylabel("Fase [deg]")
+axs[2].semilogx(w, mag2, color='tab:red', label=r'$u(t)/U$')
+axs[2].set_ylabel(r'$u(t)/U$ [dB]')
 axs[2].set_xlim([wRange[0], wRange[-1]])
 axs[2].grid()
+axs[2].legend()
+
+axs[1].semilogx(w, phase1)
+axs[1].set_ylabel("Fase [deg]")
+axs[1].set_xlim([wRange[0], wRange[-1]])
+axs[1].grid()
 
 axs[3].semilogx(w, phase2, color='tab:red')
 axs[3].set_ylabel("Fase [deg]")
@@ -303,7 +404,7 @@ tRange = np.linspace(0, 0.08, num=200)
 t, y1 = model1.step(T=tRange)
 t, y2 = model2.step(T=tRange)
 
-fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,6))
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(7,4.5))
 
 # --- omega_m ---
 axs[0].plot(t, y1 * V_nom, lw=1.8, label=r'$\omega_m(t)/U$')
