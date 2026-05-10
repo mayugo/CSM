@@ -28,7 +28,6 @@ plt.grid()
 plt.title('Resposta a escaló unitari')
 plt.xlabel('t [s]')
 plt.ylabel('Resposta [eu]')
-plt.show()
 
 # =========================
 # 2. BODE
@@ -43,7 +42,6 @@ plt.grid()
 plt.title("Bode Magnitud")
 plt.xlabel("ω [rad/s]")
 plt.ylabel("dB")
-plt.show()
 
 # =========================
 # 3. ROOT LOCUS (aprox)
@@ -65,7 +63,6 @@ plt.grid()
 plt.title("Root locus (aproximat)")
 plt.xlabel("Real")
 plt.ylabel("Imag")
-plt.show()
 
 # =========================
 # 4. DIRECT SYNTHESIS PI

@@ -129,6 +129,7 @@ axs[1,0].plot(t_out, pos, linewidth=1.8, label='G simplificat')
 #axs[1,0].set_title('Llaç tancat - posició')
 axs[1,0].set_xlabel('temps [s]')
 axs[1,0].set_ylabel('Llaç tancat - posició [eu]')
+axs[1,0].set_ylim([0,1])
 axs[1,0].grid(True)
 axs[1,0].legend()
 
@@ -146,6 +147,6 @@ axs[1,1].grid(True)
 axs[1,1].legend()
 
 plt.tight_layout()
-plt.savefig('CSM_Exemple_3_PID_pols_SOL.pdf', bbox_inches='tight', transparent=True)
+plt.savefig('CSM_Exemple_2_PID_pols_SOL.pdf', bbox_inches='tight', transparent=True)
 
 plt.show()
