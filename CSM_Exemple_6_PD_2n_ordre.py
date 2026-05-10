@@ -37,13 +37,11 @@ t_ol, y_ol = signal.step(Gm, T=t_)
 
 plt.figure(figsize=(8,5))
 plt.plot(t_ol, y_ol, linewidth=2)
-
 plt.grid(True)
 plt.title("Resposta a esglaó en llaç obert")
-plt.xlabel("t [s]")
-plt.ylabel("ω [rad/s]")
-
-plt.show()
+plt.xlabel(r"$t$ [s]")
+plt.ylabel(r"$UE$ [ue]")
+plt.tight_layout()
 
 # ---------------------------------------------------
 # Sintonització PD
@@ -58,11 +56,10 @@ omega_n = 4 / (zeta * ts2)
 Kp = omega_n**2 / 1000
 Kd = (2 * zeta * omega_n - 10) / 1000
 
-print(f"ζ = {zeta:.4f}")
+print(f"ζ   = {zeta:.4f}")
 print(f"ω_n = {omega_n:.4f}")
-
-print(f"Kp = {Kp:.6f}")
-print(f"Kd = {Kd:.6f}")
+print(f"K_p = {Kp:.6f}")
+print(f"K_d = {Kd:.6f}")
 
 # ---------------------------------------------------
 # Controlador PD
@@ -89,7 +86,6 @@ den_ol = np.polymul(den_PD, den_Gm)
 # ---------------------------------------------------
 
 num_cl = num_ol
-
 den_cl = np.polyadd(den_ol, num_ol)
 
 Gcl = signal.TransferFunction(num_cl, den_cl)
@@ -99,12 +95,7 @@ Gcl = signal.TransferFunction(num_cl, den_cl)
 # ---------------------------------------------------
 
 num_cli = [1000 * Kp]
-
-den_cli = [
-    1,
-    (10 + 1000 * Kd),
-    1000 * Kp
-]
+den_cli = [1, (10 + 1000 * Kd), 1000 * Kp]
 
 Gcli = signal.TransferFunction(num_cli, den_cli)
 
@@ -113,37 +104,23 @@ Gcli = signal.TransferFunction(num_cli, den_cli)
 # ---------------------------------------------------
 
 t_cl, y_cl = signal.step(Gcl, T=t_)
-
 t_cli, y_cli = signal.step(Gcli, T=t_)
 
-# Línies auxiliars
 u02 = 1.02 * np.ones_like(t_)
 u05 = 1.05 * np.ones_like(t_)
-
-# ---------------------------------------------------
-# Gràfica comparativa
-# ---------------------------------------------------
 
 plt.figure(figsize=(10,6))
 
 plt.plot(t_cl, y_cl, linewidth=2, label='Sistema real PD')
-
 plt.plot(t_cli, y_cli, linewidth=2, label='Model 2n ordre')
-
 plt.plot(t_, u02, 'k--', label='2%')
-
 plt.plot(t_, u05, 'r--', label='5%')
-
 plt.plot([ts2, ts2], [0, 1.02], 'g--')
-
 plt.grid(True)
-
 plt.title("Resposta control PD")
-
-plt.xlabel("t [s]")
-
-plt.ylabel("UE [ue]")
-
+plt.xlabel(r"$t$ [s]")
+plt.ylabel(r"$UE$ [ue]")
 plt.legend()
+plt.tight_layout()
 
 plt.show()
