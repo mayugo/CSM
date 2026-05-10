@@ -41,7 +41,6 @@ plt.title('Resposta a una funció escaló amb ' + str(U) + 'V al motor')
 plt.xlim([0, t[-1]])
 plt.ylim([0, 110])
 plt.grid()
-plt.show()
 
 # % Diagrama de Bode i R-Locus
 wRange = np.logspace(np.log10(0.1), np.log10(1e4), num=100)
@@ -56,7 +55,6 @@ plt.subplot(2, 1, 2)
 plt.semilogx(w, phase)  # Bode phase plot
 plt.ylabel('Phase [deg]')
 plt.xlabel('Frequency [rad/s]')
-plt.show()
 
 w, H = tf_G_m.freqresp()
 plt.figure()
@@ -65,15 +63,18 @@ plt.plot(H.real, -H.imag, "r")
 plt.xlabel('Real Axix [1/s]')
 plt.ylabel('Imaginary Axix [1/s]')
 plt.title('R-Locus: input: Volts, output: omega_m')
-plt.show()
 
-tf_G_m.poles
+print('Pols del sistema G_m')
+print(tf_G_m.poles)
 
 # %% Resolució APARTAT b i c) Sintonització analítica d'un PI
 # % control velocitat llaç tancat considerant un sistema de 2n ordre
 
 Kp = (2*zeta*omega_n*tau-1)/K 
 Ki = omega_n**2*tau/K
+
+print(f'Contrololador PID, paràmetre K_p {Kp:.4f}')
+print(f'Contrololador PID, paràmetre K_i {Ki:.4f}')
 
 # PI = Kp + Ki/s             # % controlador PI
 numC = [Kp, Ki]
@@ -89,12 +90,15 @@ den_cl = np.polyadd(den_ol, num_ol)
 
 tf_G_cl = signal.lti(num_cl, den_cl)   
 
-tf_G_cl.poles
+print('Pols del sistema G_cl')
+print(tf_G_cl.poles)
 
 # %%
 
 t, y = tf_G_cl.step(T=tRange)
 # t, y = signal.step2(tf_G_cl,T=tRange)
+
+plt.figure()
 plt.plot(t, y*omega_ss)
 plt.xlabel('t [s]')
 plt.ylabel('$\omega_m$ [rad/s]')
@@ -103,13 +107,12 @@ plt.grid()
 plt.legend(["$K_p$ = " + str(round(Kp,2)) + ", $K_i$ = " + str(round(Ki,2))])
 plt.xlim([0, t[-1]])
 plt.ylim([0, 110])
-plt.show()
 
 # %% Resolució APARTAT d) Error de variació de sortida: 'Error de velocitat'
 
 e_v=1/(Ki*K)  #% rad/s2, error en la derivada de del valor de sortida
 
-print(["L'error estacionari és de "+ str(round(e_v,4))+' rad/s2'])
+print(["L'error estacionari és de velocitat és "+ str(round(e_v,4))+' rad/s2'])
 
 
 # %% Alternativa) Direct Syntesis Method
@@ -140,7 +143,7 @@ for ii in range(lambda_.shape[0]):
     t, y = signal.step(sys_cl, T=tRange)
     y_[ii, :] = y
 
-
+plt.figure()
 # legend_=string(lambda_);
 for ii in range(0,lambda_.shape[0]):
     plt.plot(t, y_[ii,:]*omega_ss,
@@ -156,4 +159,5 @@ plt.ylabel('$\omega_m$ [rad/s]')
 plt.legend()
 plt.xlim([0, t[-1]])
 plt.ylim([0, 110])
+
 plt.show()
